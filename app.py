@@ -6,42 +6,67 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 
-st.title("🚗 Fuel Efficiency Predictor (MPG)")
+st.title("🚗 MPG Prediction (Polynomial Regression)")
 
+# Upload file
 file = st.file_uploader("Upload Auto MPG CSV", type=["csv"])
 
 if file:
     df = pd.read_csv(file)
 
+    st.subheader("📊 Dataset Preview")
     st.write(df.head())
 
-    features = ['Displacement', 'Horsepower', 'Weight', 'Acceleration']
-    target = 'MPG'
+    # 🔥 CLEAN COLUMN NAMES (VERY IMPORTANT)
+    df.columns = df.columns.str.strip().str.lower()
 
-    df = df[features + [target]].dropna()
+    # Show columns
+    st.subheader("🧾 Column Names")
+    st.write(list(df.columns))
 
-    X = df[features]
-    y = df[target]
+    try:
+        # Correct column names for most datasets
+        features = ['displacement', 'horsepower', 'weight', 'acceleration']
+        target = 'mpg'
 
-    # Polynomial transform
-    poly = PolynomialFeatures(degree=2)
-    X_poly = poly.fit_transform(X)
+        # Convert horsepower to numeric (some datasets have '?')
+        df['horsepower'] = pd.to_numeric(df['horsepower'], errors='coerce')
 
-    X_train, X_test, y_train, y_test = train_test_split(X_poly, y, test_size=0.2)
+        df = df[features + [target]].dropna()
 
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+        X = df[features]
+        y = df[target]
 
-    y_pred = model.predict(X_test)
+        # Polynomial transformation
+        poly = PolynomialFeatures(degree=2)
+        X_poly = poly.fit_transform(X)
 
-    st.subheader("📊 Model Performance")
-    st.write("MSE:", mean_squared_error(y_test, y_pred))
-    st.write("R²:", r2_score(y_test, y_pred))
+        # Split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_poly, y, test_size=0.2, random_state=42
+        )
 
-    # Plot
-    plt.scatter(y_test, y_pred)
-    plt.xlabel("Actual MPG")
-    plt.ylabel("Predicted MPG")
-    st.pyplot(plt)
+        # Model
+        model = LinearRegression()
+        model.fit(X_train, y_train)
 
-    st.info("📈 Polynomial regression captures non-linear relationships better!")
+        # Predict
+        y_pred = model.predict(X_test)
+
+        # Evaluation
+        st.subheader("📊 Model Performance")
+        st.write("MSE:", mean_squared_error(y_test, y_pred))
+        st.write("R² Score:", r2_score(y_test, y_pred))
+
+        # Plot
+        st.subheader("📉 Actual vs Predicted")
+        fig, ax = plt.subplots()
+        ax.scatter(y_test, y_pred)
+        ax.set_xlabel("Actual MPG")
+        ax.set_ylabel("Predicted MPG")
+        st.pyplot(fig)
+
+        st.success("✅ Model built successfully using Polynomial Regression!")
+
+    except KeyError:
+        st.error("❌ Column mismatch. Please check column names above.")
